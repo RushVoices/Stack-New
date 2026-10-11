@@ -1,0 +1,1262 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Stack</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Cstyle%3Eg%7Bfill:%23FFFFFF%7D%40media %28prefers-color-scheme:light%29%7Bg%7Bfill:%230A0A0C%7D%7D%3C/style%3E%3Cg%3E%3Crect x=%226%22 y=%2273%22 width=%2272%22 height=%2214%22 rx=%227%22/%3E%3Crect x=%226%22 y=%2253%22 width=%2272%22 height=%2214%22 rx=%227%22/%3E%3Crect x=%226%22 y=%2233%22 width=%2272%22 height=%2214%22 rx=%227%22/%3E%3C/g%3E%3Crect x=%2222%22 y=%2213%22 width=%2272%22 height=%2214%22 rx=%227%22 fill=%22%238B5CF6%22/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,200..800&family=Instrument+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: oversized headline over a three-column stage (copy | 3D ring of ten Stacks | inspector), then how-it-works, launches grid, launch form. Single committed white look. */
+:root{
+  --paper:#08080A; --paper-2:#17171C; --surface:#0F0F13; --ink:#F4F4F6; --on-ink:#0A0A0C; --ink-2:#B3B3BE; --mute:#7C7C89;
+  --line:#25252D; --accent:#8B5CF6; --accent-2:#A78BFA; --accent-soft:rgba(139,92,246,.14); --good:#3DDC97;
+  --display:'Bricolage Grotesque','Helvetica Neue',Arial,sans-serif;
+  --body:'Instrument Sans','Helvetica Neue',Arial,sans-serif;
+  --mono:'DM Mono',ui-monospace,Menlo,Consolas,monospace;
+  --r-s:10px; --r-m:20px;
+  --shadow:0 1px 0 rgba(255,255,255,.04) inset,0 24px 48px -20px rgba(0,0,0,.8);
+  --ease:cubic-bezier(.2,.7,.2,1);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{background:var(--paper);color:var(--ink);font:400 16px/1.55 var(--body);padding-inline:clamp(16px,4vw,40px);padding-block:0;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+.wrap{max-width:1240px;margin-inline:auto}
+a{color:inherit}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent-2);outline-offset:2px;border-radius:6px}
+.mono{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+.eyebrow{font-family:var(--mono);font-size:.74rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);margin:0 0 18px;display:flex;align-items:center;gap:10px}
+.eyebrow::before{content:"";width:22px;height:2px;background:var(--accent);box-shadow:0 0 12px var(--accent);display:block}
+.display{font-family:var(--display);font-variation-settings:"wdth" 82,"opsz" 96;font-weight:760;letter-spacing:-.035em;line-height:.93;text-wrap:balance;margin:0}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:999px;padding:11px 20px;font-weight:600;font-size:.95rem;text-decoration:none;border:1.5px solid var(--ink);background:transparent;transition:background .25s var(--ease),color .25s var(--ease),transform .25s var(--ease),border-color .25s var(--ease);white-space:nowrap}
+.btn.solid{background:var(--ink);color:var(--on-ink)}
+.btn.solid:hover{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 10px 30px -8px rgba(139,92,246,.7)}
+.btn.ghost:hover{background:var(--ink);color:var(--on-ink)}
+.btn:active{transform:scale(.97)}
+.btn[disabled]{opacity:.4;cursor:not-allowed}
+.btn.lg{padding:15px 28px;font-size:1.02rem}
+
+/* nav */
+.nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;display:flex;align-items:center;justify-content:space-between;gap:16px;height:68px;background:color-mix(in srgb,var(--paper) 86%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid transparent;transition:border-color .3s}
+.nav.scrolled{border-color:var(--line)}
+.brand{display:flex;align-items:center;gap:12px;text-decoration:none;font-family:var(--display);font-variation-settings:"wdth" 90,"opsz" 40;font-weight:800;font-size:1.7rem;letter-spacing:-.04em}
+.links{display:flex;gap:28px}
+.links a{text-decoration:none;font-size:.95rem;color:var(--ink-2);position:relative;padding-block:4px}
+.links a::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1.5px;background:var(--ink);transform:scaleX(0);transform-origin:left;transition:transform .35s var(--ease)}
+.links a:hover::after{transform:scaleX(1)}
+.nav-r{display:flex;gap:10px}
+@media (max-width:820px){.links{display:none}}
+@media (max-width:520px){#walletBtn{display:none}}
+
+/* hero */
+.hero{padding-top:clamp(28px,5vw,64px);position:relative;overflow-x:clip}
+.hero h1{font-size:clamp(2.7rem,8.4vw,7.6rem);max-width:15ch}
+.hero h1 .w{display:inline-block;overflow:hidden;vertical-align:top;padding-bottom:.08em;margin-bottom:-.08em}
+.hero h1 .w>span{display:inline-block;transform:translateY(105%);animation:rise 1s var(--ease) forwards;animation-delay:calc(var(--i)*70ms + 150ms)}
+@keyframes rise{to{transform:none}}
+.hero h1 .hot{color:var(--accent)}
+.stage-grid{display:grid;grid-template-columns:minmax(220px,1fr) minmax(0,2fr) minmax(250px,1fr);gap:clamp(12px,2vw,28px);align-items:center;margin-top:clamp(12px,2vw,28px);position:relative}
+.stage-grid::before{content:"";position:absolute;inset:0 -4%;background-image:radial-gradient(var(--line) 1.2px,transparent 1.4px);background-size:22px 22px;-webkit-mask-image:radial-gradient(ellipse 50% 50% at 50% 50%,#000 20%,transparent 75%);mask-image:radial-gradient(ellipse 50% 50% at 50% 50%,#000 20%,transparent 75%);pointer-events:none;z-index:0}
+.stage-grid>*{position:relative;z-index:1;min-width:0}
+.hero::before{content:"";position:absolute;left:50%;top:38%;width:min(1100px,100%);height:720px;transform:translate(-50%,-10%);background:radial-gradient(closest-side,rgba(139,92,246,.22),rgba(139,92,246,.06) 55%,transparent);pointer-events:none;z-index:0}
+.hero>*{position:relative;z-index:1}
+.hero h1 .hot{background:linear-gradient(100deg,#C4B5FD,var(--accent) 60%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.copy .lede{font-size:clamp(1.1rem,1.6vw,1.35rem);line-height:1.45;color:var(--ink-2);margin:0 0 26px;max-width:30ch;opacity:0;animation:fade .9s var(--ease) .9s forwards}
+.copy .cta{display:flex;flex-wrap:wrap;gap:10px;opacity:0;animation:fade .9s var(--ease) 1.05s forwards}
+@keyframes fade{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.legend{display:flex;flex-wrap:wrap;gap:8px 18px;margin:30px 0 0;padding:0;list-style:none;opacity:0;animation:fade .9s var(--ease) 1.2s forwards}
+.legend li{display:flex;align-items:center;gap:8px;font-size:.85rem;color:var(--ink-2)}
+.dot{width:12px;height:12px;border-radius:4px;display:inline-block;border:1.5px solid var(--ink)}
+.dot.c{background:var(--ink)} .dot.y{background:var(--accent);border-color:var(--accent)} .dot.o{background:var(--surface)}
+.gl-wrap{position:relative;height:clamp(380px,46vw,600px);touch-action:pan-y;opacity:0;animation:fade 1.2s var(--ease) .5s forwards}
+#gl{width:100%;height:100%;display:block;cursor:grab;touch-action:pan-y}
+.hint{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);pointer-events:none;white-space:nowrap}
+.fallback{display:none;position:absolute;inset:0;align-items:center;justify-content:center;text-align:center;color:var(--mute);padding:24px}
+.nogl .fallback{display:flex}
+.nogl #gl,.nogl .hint{display:none}
+@media (max-width:1100px){
+  .stage-grid{grid-template-columns:minmax(0,1fr)}
+  .copy .lede{max-width:44ch}
+  .gl-wrap{height:min(92vw,520px)}
+}
+
+/* inspector */
+.inspect{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-m);box-shadow:var(--shadow);padding:20px;display:flex;flex-direction:column;gap:14px}
+.seg{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:4px}
+.seg button{height:30px;padding:0;min-width:0;border:0;border-radius:6px;font-family:var(--mono);font-size:.62rem;background:var(--paper-2);color:var(--ink);transition:transform .2s var(--ease),background .3s,box-shadow .2s}
+.seg button:hover{transform:translateY(-2px)}
+.seg button.creator{background:var(--ink);color:var(--on-ink)}
+.seg button.you{background:var(--accent);color:#fff}
+.seg button.sel{box-shadow:0 0 0 2px var(--paper),0 0 0 3.5px var(--accent-2)}
+.ins-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.ins-stack{font-family:var(--display);font-variation-settings:"wdth" 82,"opsz" 60;font-weight:760;font-size:2.4rem;letter-spacing:-.04em;line-height:1}
+.ins-stack small{font-family:var(--mono);font-size:.7rem;letter-spacing:.1em;color:var(--mute);margin-right:8px;font-weight:400}
+.pill{font-family:var(--mono);font-size:.64rem;letter-spacing:.08em;text-transform:uppercase;padding:4px 9px;border-radius:999px;background:var(--paper-2);color:var(--ink-2);white-space:nowrap}
+.pill.open{background:rgba(61,220,151,.12);color:var(--good)}
+.pill.you{background:var(--accent-soft);color:var(--accent-2)}
+.price-row{display:flex;align-items:baseline;gap:8px;font-variant-numeric:tabular-nums}
+.price-row b{font-family:var(--display);font-variation-settings:"wdth" 88,"opsz" 60;font-weight:700;font-size:2.7rem;letter-spacing:-.04em;line-height:1}
+.price-row small{color:var(--mute);font-family:var(--mono);font-size:.78rem}
+.price-row .lab{margin-left:auto}
+.bar{height:4px;border-radius:4px;background:var(--paper-2);overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent-2));border-radius:4px}
+.ins-note{margin:0;font-size:.88rem;color:var(--ink-2);min-height:2.6em}
+.ins-foot{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.toggle{display:inline-flex;background:var(--paper-2);border-radius:999px;padding:3px}
+.toggle button{border:0;background:transparent;border-radius:999px;padding:5px 12px;font-size:.8rem;font-weight:500;color:var(--mute);transition:background .25s,color .25s}
+.toggle button[aria-pressed="true"]{background:var(--ink);color:var(--on-ink)}
+.linkbtn{background:none;border:0;padding:0;font-size:.8rem;color:var(--mute);text-decoration:underline;text-underline-offset:3px}
+.linkbtn:hover{color:var(--ink)}
+.earned{font-size:.8rem;color:var(--ink-2);display:flex;justify-content:space-between;border-top:1px dashed var(--line);padding-top:10px;font-variant-numeric:tabular-nums}
+
+/* sections */
+.section{padding-top:clamp(72px,11vw,150px);scroll-margin-top:56px}
+.sec-head{margin-bottom:clamp(28px,4vw,56px);max-width:900px}
+.sec-head h2{font-size:clamp(2.2rem,5.6vw,4.6rem)}
+.sec-head p.sub{font-size:1.15rem;color:var(--ink-2);margin:20px 0 0;max-width:46ch}
+@supports (animation-timeline:view()){
+  @media (prefers-reduced-motion:no-preference){
+    .reveal{animation:revealIn linear both;animation-timeline:view();animation-range:entry 0% entry 45%}
+  }
+}
+@keyframes revealIn{from{opacity:.12;transform:translateY(36px)}to{opacity:1;transform:none}}
+
+/* how */
+.how-grid{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:clamp(24px,5vw,72px);align-items:start}
+.steps{list-style:none;margin:0;padding:0;counter-reset:s}
+.steps li{border-top:1.5px solid var(--ink);padding:22px 0 30px;display:grid;grid-template-columns:44px 1fr;gap:6px 12px;transition:padding-left .45s var(--ease)}
+.steps li:last-child{border-bottom:1.5px solid var(--ink)}
+.steps li:hover{padding-left:12px}
+.steps .n{font-family:var(--mono);font-size:.78rem;color:var(--mute);padding-top:10px}
+.steps h3{font-family:var(--display);font-variation-settings:"wdth" 85,"opsz" 48;font-weight:720;font-size:clamp(1.7rem,3vw,2.4rem);letter-spacing:-.03em;margin:0;line-height:1.05;transition:color .3s}
+.steps li:hover h3{color:var(--accent)}
+.steps p{grid-column:2;margin:6px 0 0;color:var(--ink-2);max-width:44ch}
+.chart-card{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-m);box-shadow:var(--shadow);padding:20px 20px 16px;position:sticky;top:90px}
+.chart-top{display:flex;flex-wrap:wrap;gap:10px 16px;justify-content:space-between;align-items:center;margin-bottom:14px}
+.chart-top .mono{margin-right:auto}
+#chart{width:100%;height:auto;display:block;overflow:visible}
+#chart text{font-family:var(--mono);font-size:11px;fill:var(--mute)}
+#chart .grid{stroke:var(--line);stroke-width:1}
+#chart .axis{stroke:var(--ink);stroke-width:1.2}
+#chart .st{fill:none;stroke-width:2.4;stroke-linejoin:round;transition:opacity .4s,stroke-width .4s}
+#chart .st.degen{stroke:var(--accent)} #chart .st.builder{stroke:var(--ink)}
+#chart .st.dim{opacity:.22;stroke-width:1.6}
+#chart .tag{fill:var(--ink);font-size:12px;font-weight:500}
+#chart .tag.degen{fill:var(--accent-2)}
+#chart .floor{stroke:var(--mute);stroke-dasharray:3 4;stroke-width:1}
+.readout{font-family:var(--mono);font-size:.78rem;color:var(--ink-2);margin-top:12px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-variant-numeric:tabular-nums}
+@media (max-width:900px){.how-grid{grid-template-columns:minmax(0,1fr)}.chart-card{position:static}}
+
+/* launches */
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:28px}
+.tab{border:0;background:transparent;border-radius:10px;padding:10px 16px;font-weight:500;display:flex;gap:10px;align-items:center;color:var(--ink-2);transition:background .25s,color .25s}
+.tab span{font-family:var(--mono);font-size:.78rem;color:var(--mute);font-variant-numeric:tabular-nums}
+.tab:hover{background:var(--paper-2)}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--on-ink)}
+.tab[aria-selected="true"] span{color:rgba(10,10,12,.6)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,290px),1fr));gap:18px;perspective:1100px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-m);padding:20px;display:flex;flex-direction:column;gap:16px;transform:rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .5s var(--ease),box-shadow .4s var(--ease),border-color .3s;will-change:transform;transform-style:preserve-3d}
+.card:hover{box-shadow:var(--shadow);border-color:#3A3A45;transition:transform .12s linear,box-shadow .4s var(--ease),border-color .3s}
+.card.flash{animation:flash 1s var(--ease)}
+@keyframes flash{0%{box-shadow:0 0 0 0 rgba(139,92,246,.6)}100%{box-shadow:0 0 0 18px rgba(139,92,246,0)}}
+.c-head{display:flex;align-items:center;gap:12px}
+.av{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font-family:var(--display);font-weight:800;font-size:1.2rem;flex:none}
+.c-head h3{margin:0;font-family:var(--display);font-variation-settings:"wdth" 88,"opsz" 36;font-weight:700;font-size:1.25rem;letter-spacing:-.025em;line-height:1.1}
+.c-head .mono{display:block;margin-top:2px;letter-spacing:.06em}
+.c-head .tag{margin-left:auto}
+.stacks{display:grid;grid-template-columns:repeat(10,1fr);gap:3px}
+.stacks i{height:22px;border-radius:4px;background:var(--paper-2);transition:background .4s,transform .4s var(--ease)}
+.stacks i.on{background:var(--ink)}
+.stacks i.new{background:var(--accent);transform:translateY(-4px)}
+.c-meta{display:flex;justify-content:space-between;font-size:.85rem;color:var(--ink-2)}
+.c-px{display:flex;align-items:baseline;gap:6px;font-variant-numeric:tabular-nums}
+.c-px b{font-family:var(--display);font-variation-settings:"wdth" 88,"opsz" 48;font-weight:700;font-size:1.9rem;letter-spacing:-.035em;line-height:1}
+.c-px small{color:var(--mute);font-family:var(--mono);font-size:.74rem}
+.c-px .t{margin-left:auto;font-family:var(--mono);font-size:.7rem;color:var(--mute);letter-spacing:.04em}
+.card .btn{width:100%;padding:11px}
+.empty{grid-column:1/-1;border:1.5px dashed var(--line);border-radius:var(--r-m);padding:48px 24px;text-align:center;color:var(--mute)}
+.note{margin-top:22px;color:var(--mute);font-size:.85rem}
+
+/* launch form */
+.launch-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,360px);gap:clamp(24px,4vw,56px);align-items:start}
+.form{display:flex;flex-direction:column;gap:0}
+.block{padding:34px 0;border-top:1px solid var(--line)}
+.block:first-child{border-top:0;padding-top:0}
+.block h3{font-family:var(--display);font-variation-settings:"wdth" 88,"opsz" 48;font-weight:720;font-size:1.9rem;letter-spacing:-.03em;margin:0 0 20px;display:flex;align-items:baseline;gap:12px;line-height:1}
+.block h3 .n{font-family:var(--mono);font-size:.72rem;letter-spacing:.06em;color:var(--mute);font-weight:400}
+fieldset{border:0;padding:0;margin:0;min-width:0}
+legend{padding:0;margin-bottom:10px}
+.venues{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.venue{display:flex;align-items:center;gap:12px;text-align:left;border:1.5px solid var(--line);background:var(--surface);border-radius:14px;padding:14px 16px;transition:border-color .3s,background .3s,transform .3s var(--ease)}
+.venue:hover{transform:translateY(-2px)}
+.venue[aria-checked="true"]{border-color:var(--ink);background:var(--paper-2)}
+.venue b{display:block;font-weight:600;line-height:1.2}
+.venue .mono{letter-spacing:.04em}
+.venue svg{flex:none}
+.row2{display:grid;grid-template-columns:2fr 1fr;gap:14px}
+.field{display:flex;flex-direction:column;gap:7px;min-width:0}
+.field label,.lbl{font-size:.82rem;font-weight:600;display:flex;justify-content:space-between;gap:8px}
+.field label span,.lbl span{font-family:var(--mono);font-weight:400;color:var(--mute);font-size:.72rem}
+.in{width:100%;border:1.5px solid var(--line);background:var(--surface);border-radius:12px;padding:13px 14px;font:inherit;color:var(--ink);transition:border-color .25s,box-shadow .25s}
+.in::placeholder{color:#5C5C68}
+.in:hover{border-color:#3A3A45}
+.in:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 4px rgba(139,92,246,.2)}
+.drop{display:grid;place-items:center;text-align:center;min-height:170px;border:1.5px dashed #34343E;border-radius:16px;background:var(--surface);cursor:pointer;padding:20px;transition:border-color .3s,background .3s;position:relative;overflow:hidden;gap:6px;color:var(--ink-2)}
+.drop:hover,.drop.over{border-color:var(--ink);background:var(--paper-2)}
+.drop input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.drop img{width:104px;height:104px;border-radius:24px;object-fit:cover;box-shadow:var(--shadow)}
+.drop .fn{font-family:var(--mono);font-size:.74rem;color:var(--mute);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hintline{font-size:.8rem;color:var(--mute);margin:8px 0 0}
+.err{color:#FF7A7A}
+details.social{margin-top:20px}
+details.social summary{cursor:pointer;font-weight:600;font-size:.9rem;list-style:none;display:flex;align-items:center;gap:8px}
+details.social summary::-webkit-details-marker{display:none}
+details.social summary::before{content:"";width:7px;height:7px;border-right:2px solid var(--ink);border-bottom:2px solid var(--ink);transform:rotate(-45deg);transition:transform .3s var(--ease)}
+details.social[open] summary::before{transform:rotate(45deg)}
+details.social summary span{font-family:var(--mono);font-weight:400;color:var(--mute);font-size:.72rem}
+.social-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px}
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.mode{text-align:left;border:1.5px solid var(--line);background:var(--surface);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:12px;transition:border-color .3s,background .3s,transform .4s var(--ease),box-shadow .4s}
+.mode:hover{transform:translateY(-3px)}
+.mode[aria-checked="true"]{border-color:var(--ink);box-shadow:var(--shadow)}
+.mode[data-mode="degen"][aria-checked="true"]{background:var(--accent-soft);border-color:var(--accent)}
+.mode[data-mode="builder"][aria-checked="true"]{background:var(--paper-2)}
+.mode .top{display:flex;justify-content:space-between;align-items:center}
+.mode .top b{font-family:var(--display);font-variation-settings:"wdth" 88,"opsz" 36;font-weight:720;font-size:1.4rem;letter-spacing:-.03em}
+.mode p{margin:0;font-size:.88rem;color:var(--ink-2)}
+.mode dl{margin:0;display:grid;grid-template-columns:1fr auto;gap:4px 10px;font-size:.84rem}
+.mode dt{color:var(--mute)} .mode dd{margin:0;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.stepper{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.step-ctl{display:inline-flex;border:1.5px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
+.step-ctl button{width:44px;height:44px;border:0;background:transparent;font-size:1.2rem;transition:background .2s}
+.step-ctl button:hover{background:var(--paper-2)}
+.step-ctl output{min-width:48px;display:grid;place-items:center;font-family:var(--mono);font-weight:500;border-inline:1.5px solid var(--line)}
+.preseg{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:5px;margin-top:16px}
+.preseg span{height:34px;border-radius:7px;display:grid;place-items:center;font-family:var(--mono);font-size:.64rem;background:var(--paper-2);color:#55555F;transition:background .35s,color .35s,transform .45s var(--ease)}
+.preseg span.pre{background:var(--ink);color:var(--on-ink);transform:translateY(-5px)}
+.preseg span.avail{background:var(--surface);border:1.5px solid var(--line);color:var(--mute)}
+.est{display:flex;justify-content:space-between;margin-top:12px;font-size:.85rem;color:var(--ink-2)}
+.est b{font-family:var(--mono);font-weight:500;color:var(--ink)}
+
+.summary{position:sticky;top:90px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-m);box-shadow:var(--shadow);padding:22px;display:flex;flex-direction:column;gap:16px}
+.summary h3{margin:0;font-family:var(--display);font-variation-settings:"wdth" 88,"opsz" 36;font-weight:720;font-size:1.35rem;letter-spacing:-.03em}
+.sum-rows{margin:0;display:grid;gap:10px}
+.sum-rows div{display:flex;justify-content:space-between;gap:12px;font-size:.9rem;font-variant-numeric:tabular-nums}
+.sum-rows dt{color:var(--mute)} .sum-rows dd{margin:0;font-family:var(--mono);font-size:.84rem;text-align:right}
+.sum-rows .total{border-top:1.5px solid var(--ink);padding-top:12px;font-weight:600}
+.sum-rows .total dd{font-size:1.05rem;font-weight:500}
+.next{margin:0;padding:0;list-style:none;display:grid;gap:8px;counter-reset:n;font-size:.84rem;color:var(--ink-2);border-top:1px solid var(--line);padding-top:16px}
+.next li{counter-increment:n;display:flex;gap:10px}
+.next li::before{content:counter(n);font-family:var(--mono);font-size:.68rem;color:var(--mute);padding-top:2px;min-width:12px}
+.help{font-size:.82rem;color:var(--mute);margin:0;min-height:2.4em}
+.preview-flag{font-family:var(--mono);font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-2);background:var(--accent-soft);padding:6px 10px;border-radius:8px;align-self:flex-start}
+.progress{display:grid;gap:10px;margin:0;padding:0;list-style:none}
+.progress li{display:flex;align-items:center;gap:10px;font-size:.88rem;color:var(--mute);transition:color .3s}
+.progress li i{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--line);flex:none;transition:background .3s,border-color .3s}
+.progress li.run{color:var(--ink)} .progress li.run i{border-color:var(--ink);border-top-color:transparent;animation:spin .7s linear infinite}
+.progress li.done{color:var(--ink)} .progress li.done i{background:var(--good);border-color:var(--good)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.done-box{border-top:1px solid var(--line);padding-top:14px;font-size:.88rem;color:var(--ink-2)}
+.done-box b{color:var(--ink)}
+.shake{animation:shake .45s}
+@keyframes shake{20%,60%{transform:translateX(-5px)}40%,80%{transform:translateX(5px)}}
+@media (max-width:980px){.launch-grid{grid-template-columns:minmax(0,1fr)}.summary{position:static}}
+@media (max-width:620px){.social-grid{grid-template-columns:1fr}.modes{grid-template-columns:1fr}.row2{grid-template-columns:1fr}}
+
+footer{margin-top:clamp(80px,12vw,160px);border-top:1px solid var(--line);padding-block:36px 48px;display:flex;flex-wrap:wrap;gap:16px 40px;justify-content:space-between;align-items:center;color:var(--mute);font-size:.88rem}
+/* docs */
+.docs{padding-top:clamp(28px,5vw,72px)}
+.docs-head{margin-bottom:clamp(32px,5vw,64px);max-width:900px}
+.docs-head h1{font-size:clamp(2.6rem,7vw,5.6rem)}
+.docs-head p{font-size:1.2rem;color:var(--ink-2);margin:20px 0 0;max-width:48ch}
+.docs-grid{display:grid;grid-template-columns:220px minmax(0,1fr);gap:clamp(24px,5vw,80px);align-items:start}
+.dside{position:sticky;top:92px;display:flex;flex-direction:column;gap:2px;border-left:1.5px solid var(--line)}
+.dside .mono{padding:0 0 10px 16px}
+.dside a{display:block;text-decoration:none;color:var(--mute);font-size:.94rem;padding:7px 16px;margin-left:-1.5px;border-left:1.5px solid transparent;transition:color .25s,border-color .25s,padding-left .35s var(--ease)}
+.dside a:hover{color:var(--ink);padding-left:20px}
+.dside a.on{color:var(--ink);border-left-color:var(--ink);font-weight:600}
+.dbody{max-width:720px;min-width:0}
+.dbody section{padding-bottom:clamp(40px,6vw,72px);scroll-margin-top:92px}
+.dbody h2{font-family:var(--display);font-variation-settings:"wdth" 86,"opsz" 60;font-weight:740;font-size:clamp(1.9rem,3.6vw,2.7rem);letter-spacing:-.035em;line-height:1;margin:0 0 20px}
+.dbody h3{font-family:var(--display);font-variation-settings:"wdth" 90,"opsz" 30;font-weight:700;font-size:1.25rem;letter-spacing:-.02em;margin:28px 0 8px}
+.dbody p{font-size:1.06rem;line-height:1.7;color:var(--ink-2);margin:0 0 16px}
+.dbody p strong{color:var(--ink);font-weight:600}
+.dbody code{font-family:var(--mono);font-size:.86em;background:var(--paper-2);border-radius:6px;padding:2px 7px;color:var(--ink)}
+.formula{font-family:var(--mono);font-size:.95rem;background:var(--paper-2);color:var(--ink);border:1px solid var(--line);border-radius:14px;padding:18px 22px;margin:20px 0;overflow-x:auto;white-space:nowrap}
+.formula b{color:var(--accent-2);font-weight:500}
+.dbody .stacks{margin:22px 0 8px}
+.dbody .stacks i{height:40px;display:grid;place-items:center;font-style:normal;font-family:var(--mono);font-size:.7rem;color:var(--mute)}
+.dbody .stacks i.on{color:var(--on-ink)}
+.dbody .stacks i.new{color:#fff}
+.tbl{width:100%;border-collapse:collapse;margin:20px 0;font-size:.95rem;font-variant-numeric:tabular-nums}
+.tbl th{font-family:var(--mono);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);font-weight:400;text-align:left;padding:10px 14px 10px 0;border-bottom:1.5px solid var(--ink);white-space:nowrap}
+.tbl td{padding:13px 14px 13px 0;border-bottom:1px solid var(--line);color:var(--ink-2);vertical-align:top}
+.tbl td:first-child{color:var(--ink);font-weight:600}
+.tbl-wrap{overflow-x:auto}
+.flow{list-style:none;margin:24px 0;padding:0;counter-reset:f;position:relative}
+.flow::before{content:"";position:absolute;left:17px;top:18px;bottom:18px;width:1.5px;background:var(--line)}
+.flow li{counter-increment:f;display:grid;grid-template-columns:36px 1fr;gap:16px;padding:0 0 26px;position:relative}
+.flow li:last-child{padding-bottom:0}
+.flow li::before{content:counter(f);width:36px;height:36px;border-radius:50%;background:var(--paper);border:1.5px solid var(--ink);display:grid;place-items:center;font-family:var(--mono);font-size:.78rem;transition:background .3s,color .3s,transform .4s var(--ease)}
+.flow li:hover::before{background:var(--ink);color:var(--on-ink);transform:scale(1.1)}
+.flow h3{margin:4px 0 4px;font-size:1.15rem}
+.flow p{margin:0;font-size:1rem}
+.callout{border-radius:var(--r-m);background:var(--accent-soft);border:1px solid rgba(139,92,246,.3);padding:20px 22px;margin:22px 0;color:#DDD6FE}
+.callout p{color:inherit;margin:0;font-size:1rem}
+.callout strong{color:#F5F3FF}
+.faq details{border-top:1px solid var(--line);padding:16px 0}
+.faq details:last-child{border-bottom:1px solid var(--line)}
+.faq summary{cursor:pointer;font-weight:600;font-size:1.04rem;list-style:none;display:flex;justify-content:space-between;gap:16px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";font-family:var(--mono);color:var(--mute);transition:transform .3s var(--ease)}
+.faq details[open] summary::after{transform:rotate(45deg)}
+.faq details p{margin:10px 0 0}
+@media (max-width:860px){.docs-grid{grid-template-columns:minmax(0,1fr)}.dside{position:static;flex-direction:row;flex-wrap:wrap;border-left:0;gap:6px}.dside .mono{width:100%;padding:0}.dside a{border:1.5px solid var(--line);border-radius:999px;padding:6px 14px;margin:0}.dside a:hover{padding-left:14px}.dside a.on{border-color:var(--ink)}}
+.mine-list{display:flex;flex-direction:column;gap:10px}
+.mine-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:16px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 18px}
+.mine-row b{display:block;font-family:var(--display);font-variation-settings:"wdth" 88,"opsz" 36;font-weight:700;font-size:1.15rem;letter-spacing:-.02em}
+.mine-row .mono{letter-spacing:.04em;text-transform:none}
+.mine-amt{font-variant-numeric:tabular-nums;text-align:right}
+.mine-amt b{display:inline;font-size:1.3rem}
+.mine-amt small{color:var(--mute)}
+.mine-act{display:flex;gap:8px}
+.mine-act .btn{padding:9px 16px;font-size:.88rem}
+.live-only{display:none}
+.is-live .live-only{display:inline}
+.is-live .preview-flag{color:var(--good);background:rgba(61,220,151,.12)}
+@media (max-width:700px){.mine-row{grid-template-columns:minmax(0,1fr)}.mine-amt{text-align:left}}
+#toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translate(-50%,24px);background:var(--ink);color:var(--on-ink);padding:12px 20px;border-radius:999px;font-size:.9rem;opacity:0;pointer-events:none;transition:opacity .35s var(--ease),transform .35s var(--ease);z-index:50;max-width:min(92vw,520px);text-align:center}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+@media (prefers-reduced-motion:reduce){
+  .hero h1 .w>span{transform:none;animation:none}
+  .copy .lede,.copy .cta,.legend,.gl-wrap{opacity:1;animation:none}
+  .card,.steps li,.seg button,.venue,.mode{transition:none}
+}
+</style>
+
+</head>
+<body>
+<header class="nav wrap" id="nav" style="background-color:color-mix(in srgb,#08080A 80%,transparent)">
+  <a class="brand" href="#top" aria-label="Stack home">
+    <svg viewBox="0 0 100 100" width="26" height="26" aria-hidden="true"><g fill="#F4F4F6"><rect x="6" y="73" width="72" height="14" rx="7"/><rect x="6" y="53" width="72" height="14" rx="7"/><rect x="6" y="33" width="72" height="14" rx="7"/></g><rect x="22" y="13" width="72" height="14" rx="7" fill="#8B5CF6"/></svg>
+    <span>Stack</span>
+  </a>
+  <nav class="links" aria-label="Sections"><a href="#how">How it works</a><a href="#launches">Launches</a><a href="#launch">Launch</a><a href="#mine" class="live-only">My Stacks</a><a href="#docs">Docs</a></nav>
+  <div class="nav-r">
+    <button class="btn ghost" id="walletBtn" type="button">Connect wallet</button>
+    <a class="btn solid" href="#launch">Launch a token</a>
+  </div>
+</header>
+
+<main class="wrap" id="top">
+  <section class="hero">
+    <h1 class="display" id="h1" data-text="Great things happen when ownership is shared.">Great things happen when ownership is shared.</h1>
+
+    <div class="stage-grid">
+      <div class="copy">
+        <p class="lede">Turn a token’s creator fees into ten Stacks. Buy a share. Earn as it trades.</p>
+        <div class="cta">
+          <a class="btn solid lg" href="#launch">Launch a token</a>
+          <a class="btn ghost lg" href="#launches">Find a Stack</a>
+        </div>
+      </div>
+
+      <div class="gl-wrap" id="glWrap">
+        <canvas id="gl" aria-label="A token split into ten Stacks, with its fees flowing into each one. Drag to turn."></canvas>
+        <div class="fallback"><span>The 3D view needs WebGL. Pick a Stack from the selector.</span></div>
+        <div class="hint mono">Drag to turn · Click a Stack</div>
+      </div>
+
+      <aside class="inspect" aria-label="Stack inspector">
+        <div class="mono">How a Stack is priced</div>
+        <div class="seg" id="heroSeg" role="group" aria-label="Choose a Stack"></div>
+        <div class="ins-top"><div class="ins-stack"><small>STACK</small><span id="insLot">04</span></div><span class="pill open" id="insPill">10% of fees</span></div>
+        <div class="price-row"><b id="insPrice">1.500</b><small>SOL</small><span class="mono lab" id="insPriceLab">Example</span></div>
+        <div class="bar" aria-hidden="true"><i id="insBar"></i></div>
+        <p class="ins-note" id="insNote"></p>
+        <a class="btn solid" id="insTake" href="#launches">See live launches</a>
+        <div class="ins-foot">
+          <div class="toggle" role="group" aria-label="Auction mode"><button type="button" data-hm="degen" aria-pressed="true">Degen</button><button type="button" data-hm="builder" aria-pressed="false">Builder</button></div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <section class="section" id="how">
+    <div class="sec-head reveal">
+      <p class="eyebrow">How a Stack works</p>
+      <h2 class="display">One fee stream, split ten ways.</h2>
+    </div>
+    <div class="how-grid">
+      <ol class="steps reveal">
+        <li><span class="n">01</span><h3>Launch</h3><p>Pick a venue, name the token, and choose Degen or Builder pricing. Pre-buy up to five Stacks at the floor price before the public sees them.</p></li>
+        <li><span class="n">02</span><h3>Auction</h3><p>The remaining Stacks open at the start price and step down every 15 seconds until someone takes one.</p></li>
+        <li><span class="n">03</span><h3>Earn</h3><p>Each Stack holds a tenth of the token’s creator fees. As the token trades, holders get paid.</p></li>
+      </ol>
+      <figure class="chart-card reveal">
+        <div class="chart-top">
+          <span class="mono">Price per Stack, SOL</span>
+          <div class="toggle" role="group" aria-label="Chart mode"><button type="button" data-cm="degen" aria-pressed="true">Degen</button><button type="button" data-cm="builder" aria-pressed="false">Builder</button></div>
+          <div class="toggle" role="group" aria-label="Playback speed"><button type="button" data-sp="1" aria-pressed="true">1×</button><button type="button" data-sp="10" aria-pressed="false">10×</button></div>
+        </div>
+        <svg id="chart" viewBox="0 0 640 300" role="img" aria-label="Staircase chart of Stack price falling every 15 seconds from the start price to the floor, for Degen and Builder modes"></svg>
+        <div class="readout"><span id="chartRead"></span><span>Seconds since the auction opened</span></div>
+      </figure>
+    </div>
+  </section>
+
+  <section class="section" id="launches">
+    <div class="sec-head reveal"><p class="eyebrow">Browse</p><h2 class="display">Find your next Stack<span style="color:var(--accent)">.</span></h2></div>
+    <div class="tabs" id="tabs" role="tablist" aria-label="Launch filters"></div>
+    <div class="grid" id="grid" role="tabpanel"></div>
+    <p class="note" id="gridNote">Launches appear here as soon as they go live.</p>
+  </section>
+
+  <section class="section" id="mine" hidden>
+    <div class="sec-head"><p class="eyebrow">Your Stacks</p><h2 class="display">What you’ve earned.</h2><p class="sub">Fees build up in each Stack as the token trades. Collect fees pays out everything the token has earned so far to all ten Stacks, then Claim sends your share to your wallet.</p></div>
+    <div id="mineList" class="mine-list"></div>
+    <p class="note"><button class="linkbtn" id="mineConnect" type="button">Connect wallet</button> to refresh this list.</p>
+  </section>
+
+  <section class="section" id="launch">
+    <div class="sec-head reveal">
+      <p class="eyebrow">Launch</p>
+      <h2 class="display">Start something worth sharing.</h2>
+      <p class="sub">Ten Stacks. One fee stream. Set the terms and open the auction.</p>
+    </div>
+    <div class="launch-grid">
+      <form class="form" id="launchForm" novalidate autocomplete="off">
+        <div class="block">
+          <fieldset>
+            <legend class="mono">Trading venue</legend>
+            <div class="venues" role="radiogroup" aria-label="Trading venue">
+              <button type="button" class="venue" role="radio" aria-checked="true" data-venue="pump">
+                <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><g transform="rotate(-40 15 15)"><rect x="3" y="10" width="24" height="10" rx="5" fill="#0F0F13" stroke="#F4F4F6" stroke-width="1.6"/><path d="M15 10h7a5 5 0 0 1 0 10h-7z" fill="#2FBF71"/></g></svg>
+                <span><b>Pump</b><span class="mono">pump.fun</span></span>
+              </button>
+              <button type="button" class="venue" role="radio" aria-checked="false" data-venue="meteora">
+                <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><circle cx="20" cy="10" r="6" fill="#8B5CF6"/><path d="M16 14 4 26M13 11 2 22M19 17 9 28" stroke="#F4F4F6" stroke-width="1.8" stroke-linecap="round"/></svg>
+                <span><b>Meteora</b><span class="mono">dynamic pools</span></span>
+              </button>
+            </div>
+          </fieldset>
+        </div>
+
+        <div class="block">
+          <h3><span class="n">1</span>Token</h3>
+          <div class="row2">
+            <div class="field"><label for="tName">Name <span id="nameCt">0/32</span></label><input class="in" id="tName" maxlength="32" placeholder="Gigachad Cat"></div>
+            <div class="field"><label for="tSym">Symbol <span id="symCt">0/10</span></label><input class="in" id="tSym" maxlength="10" placeholder="GIGA" style="text-transform:uppercase"></div>
+          </div>
+          <div class="field" style="margin-top:18px">
+            <span class="lbl">Token image <span>required</span></span>
+            <label class="drop" id="drop" for="tImg">
+              <input type="file" id="tImg" accept="image/png,image/jpeg,image/gif,image/webp">
+              <span id="dropIdle">Choose or drop a token image</span>
+              <img id="dropImg" alt="" hidden>
+              <span class="fn" id="dropFn" hidden></span>
+            </label>
+            <p class="hintline" id="imgHint">PNG, JPEG, GIF or WebP · max 5 MB.</p>
+          </div>
+          <details class="social">
+            <summary>Social links <span>optional</span></summary>
+            <div class="social-grid">
+              <div class="field"><label for="sX">X</label><input class="in" id="sX" placeholder="x.com/yourtoken"></div>
+              <div class="field"><label for="sT">Telegram</label><input class="in" id="sT" placeholder="t.me/yourtoken"></div>
+              <div class="field"><label for="sW">Website</label><input class="in" id="sW" placeholder="yourtoken.xyz"></div>
+            </div>
+          </details>
+        </div>
+
+        <div class="block">
+          <h3><span class="n">2</span>Auction mode</h3>
+          <div class="modes" role="radiogroup" aria-label="Auction mode">
+            <button type="button" class="mode" role="radio" aria-checked="true" data-mode="degen">
+              <div class="top"><b>Degen</b></div><p>Cheap Stacks, fast price discovery.</p>
+              <dl><dt>Start</dt><dd>1.5 SOL</dd><dt>Floor</dt><dd>0.5 SOL</dd><dt>Drop / 15s</dt><dd>0.125 SOL</dd></dl>
+            </button>
+            <button type="button" class="mode" role="radio" aria-checked="false" data-mode="builder">
+              <div class="top"><b>Builder</b></div><p>Premium Stacks for launches with real backing.</p>
+              <dl><dt>Start</dt><dd>4 SOL</dd><dt>Floor</dt><dd>1 SOL</dd><dt>Drop / 15s</dt><dd>0.2 SOL</dd></dl>
+            </button>
+          </div>
+        </div>
+
+        <div class="block">
+          <h3><span class="n">3</span>Pre-buy Stacks</h3>
+          <div class="stepper">
+            <div class="step-ctl"><button type="button" id="preMinus" aria-label="Fewer Stacks">−</button><output id="preN" aria-live="polite">3</output><button type="button" id="prePlus" aria-label="More Stacks">+</button></div>
+            <span class="hintline" style="margin:0">At the floor price · max 5. Keep a share of your own fee stream before the auction opens.</span>
+          </div>
+          <div class="preseg" id="preSeg" aria-hidden="true"></div>
+        </div>
+
+        <div class="block">
+          <h3>Dev buy</h3>
+          <div class="field">
+            <label for="dev">Buy your token · SOL <span>optional</span></label>
+            <input class="in" id="dev" inputmode="decimal" placeholder="0">
+          </div>
+          <div class="est"><span>Estimated tokens received</span><b id="devEst">~0 tokens</b></div>
+        </div>
+      </form>
+
+      <aside class="summary" aria-label="Launch summary">
+        <span class="preview-flag" id="netFlag">Launching soon</span>
+        <h3>Your launch</h3>
+        <dl class="sum-rows">
+          <div><dt>Venue</dt><dd id="sVenue">Pump</dd></div>
+          <div><dt>Mode</dt><dd id="sMode">Degen</dd></div>
+          <div><dt>Stacks for auction</dt><dd id="sAuc">7 of 10</dd></div>
+          <div><dt>Pre-buy</dt><dd id="sPre">3 × 0.5</dd></div>
+          <div><dt>Dev buy</dt><dd id="sDev">0 SOL</dd></div>
+          <div><dt>Network costs</dt><dd>~0.04 SOL</dd></div>
+          <div class="total"><dt>Total, about</dt><dd id="sTotal">1.5 SOL</dd></div>
+        </dl>
+        <button class="btn solid lg" id="launchBtn" type="button">Launch token</button>
+        <p class="help" id="help"></p>
+        <ol class="progress" id="progress" hidden></ol>
+        <div class="done-box" id="doneBox" hidden></div>
+        <ol class="next">
+          <li>Image and metadata are uploaded.</li>
+          <li>The token is created on your venue.</li>
+          <li>Your pre-bought Stacks are reserved.</li>
+          <li>The auction opens for the other Stacks.</li>
+          <li>Creator fees stream to Stack holders.</li>
+        </ol>
+      </aside>
+    </div>
+  </section>
+
+  <footer>
+    <a class="brand" href="#top" style="font-size:1.3rem"><span>Stack</span></a>
+    <span>Ten Stacks. One fee stream.</span>
+    <span class="mono">Built for Solana · Pump · Meteora</span>
+  </footer>
+</main>
+<div class="wrap docs" id="docsView" hidden>
+  <div class="docs-head">
+    <p class="eyebrow">Docs</p>
+    <h1 class="display">How Stacks work.</h1>
+    <p>What a Stack is, how the auction prices it, what happens when you take one, and how fees reach you.</p>
+  </div>
+  <div class="docs-grid">
+    <nav class="dside" aria-label="Docs sections">
+      <span class="mono">On this page</span>
+      <a href="#docs-overview">Overview</a>
+      <a href="#docs-stacks">What a Stack is</a>
+      <a href="#docs-auction">The auction</a>
+      <a href="#docs-take">Taking a Stack</a>
+      <a href="#docs-fees">Earning fees</a>
+      <a href="#docs-launch">Launching a token</a>
+      <a href="#docs-status">Terms</a>
+      <a href="#docs-faq">FAQ</a>
+    </nav>
+    <article class="dbody">
+      <section id="docs-overview" data-ds>
+        <h2>Overview</h2>
+        <p>Every token earns creator fees as it trades. Stacks splits that stream into <strong>ten equal shares</strong> and sells them in a price-falling auction. If you hold a Stack, you earn one tenth of the creator fees for as long as the token trades.</p>
+        <p>The creator keeps the choice of how many Stacks to hold from day one. Everyone else buys the rest at a price that starts high and steps down until someone takes it.</p>
+      </section>
+
+      <section id="docs-stacks" data-ds>
+        <h2>What a Stack is</h2>
+        <p>A Stack is a numbered claim on a share of one token’s creator fees. Every launch has exactly ten, numbered 01 to 10, and each is worth 10% of the same stream.</p>
+        <div class="stacks" aria-hidden="true"><i class="on">01</i><i class="on">02</i><i class="on">03</i><i>04</i><i>05</i><i>06</i><i>07</i><i>08</i><i>09</i><i>10</i></div>
+        <p style="font-size:.9rem;color:var(--mute)">Example: a creator who pre-bought three Stacks holds 30% of the fee stream. Seven Stacks go to auction.</p>
+        <table class="tbl"><thead><tr><th>State</th><th>Meaning</th></tr></thead><tbody>
+          <tr><td>Creator</td><td>Pre-bought by the token’s creator at the floor price, before the auction opened.</td></tr>
+          <tr><td>Open</td><td>Up for auction at the current price.</td></tr>
+          <tr><td>Yours</td><td>Held by your wallet. Fees for this Stack are credited to you.</td></tr>
+        </tbody></table>
+      </section>
+
+      <section id="docs-auction" data-ds>
+        <h2>The auction</h2>
+        <p>Open Stacks are sold at a price that falls on a fixed schedule. Every 15 seconds the price drops by one step, until it reaches the floor. It stays at the floor until the Stack is taken.</p>
+        <div class="formula">price = max(<b>floor</b>, <b>start</b> − <b>drop</b> × ⌊seconds ÷ 15⌋)</div>
+        <p>For example, in Degen mode after 45 seconds the price is 1.5 − 0.125 × 3 = <strong>1.125 SOL</strong>.</p>
+        <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Mode</th><th>Start</th><th>Floor</th><th>Drop / 15s</th><th>Time to floor</th><th>Built for</th></tr></thead><tbody>
+          <tr><td>Degen</td><td>1.5 SOL</td><td>0.5 SOL</td><td>0.125 SOL</td><td>2 min</td><td>Cheap Stacks, fast price discovery</td></tr>
+          <tr><td>Builder</td><td>4 SOL</td><td>1 SOL</td><td>0.2 SOL</td><td>3 min 45 s</td><td>Premium Stacks for launches with real backing</td></tr>
+        </tbody></table></div>
+        <p>The creator picks the mode when launching. You can watch both schedules play out on the <a href="#how">chart on the home page</a>.</p>
+      </section>
+
+      <section id="docs-take" data-ds>
+        <h2>Taking a Stack</h2>
+        <p>Taking a Stack is one transaction that you sign in your wallet. It either completes in full or does not happen at all.</p>
+        <ol class="flow">
+          <li><div><h3>Choose an open Stack</h3><p>Pick a Stack that is open and check the price shown. The price keeps falling while you decide.</p></div></li>
+          <li><div><h3>Sign once</h3><p>Your wallet shows the Stack number and the most you are willing to pay. That limit is the price you saw when you clicked.</p></div></li>
+          <li><div><h3>The price is calculated at the moment of purchase</h3><p>The program works out the price from the auction’s start, floor, drop and elapsed time. It does not rely on what your screen displayed. If the result is above your limit, the transaction fails and you pay nothing.</p></div></li>
+          <li><div><h3>You pay and the Stack is assigned to you</h3><p>The price is taken from your wallet in SOL and the Stack is recorded against your address. If someone else took the same Stack a moment earlier, your transaction fails and your SOL stays put.</p></div></li>
+          <li><div><h3>You start earning</h3><p>From the next fees the token earns, one tenth is credited to you for this Stack.</p></div></li>
+        </ol>
+      </section>
+
+      <section id="docs-fees" data-ds>
+        <h2>Earning fees</h2>
+        <p>Taking a Stack does not pay you anything by itself. You earn from trading activity that happens afterwards.</p>
+        <p>Every launch has ten vaults, one per Stack, that only the Stacks program can pay out from. The auction does not open until the program has checked on-chain that the token’s creator fees are wired to those vaults and can’t be changed.</p>
+        <p><strong>On Pump</strong>, the coin’s fee sharing is set to the ten vaults at 10% each. Pump locks that list permanently, so not even the creator can change it. <strong>On Meteora</strong>, the pool’s creator role is handed to the Stacks program, which can only send the fees to the ten vaults.</p>
+        <p>To get paid, press <strong>Collect fees</strong>: it pays everything the token has earned so far into all ten vaults at once, and anyone can do it. Then <strong>Claim</strong> sends your vault’s balance to your wallet in SOL. Fees earned by a Stack before anyone buys it stay in its vault and go to whoever takes it.</p>
+        <p>More trading volume means more fees. A quiet token earns little, and a Stack has no guaranteed return.</p>
+      </section>
+
+      <section id="docs-launch" data-ds>
+        <h2>Launching a token</h2>
+        <p>Creators set the terms on the <a href="#launch">launch form</a> and sign once.</p>
+        <table class="tbl"><thead><tr><th>Setting</th><th>What it does</th></tr></thead><tbody>
+          <tr><td>Trading venue</td><td>Where the token trades: Pump (pump.fun) or Meteora.</td></tr>
+          <tr><td>Token</td><td>Name (up to 32 characters), symbol (up to 10) and an image of up to 5 MB.</td></tr>
+          <tr><td>Auction mode</td><td>Degen or Builder pricing, as in the table above.</td></tr>
+          <tr><td>Pre-buy Stacks</td><td>0 to 5 Stacks you keep before the public auction. Since the price would be paid to you, you only pay the 2% fee on the floor price.</td></tr>
+          <tr><td>Dev buy</td><td>Optional SOL spent on the token itself at launch, shown with an estimate of tokens received.</td></tr>
+        </tbody></table>
+        <p>The total you sign is <code>2% × pre-buy Stacks × floor price + dev buy</code>, plus about 0.04 SOL of network rent for the new accounts. For example, three Degen pre-buys and a 0.2 SOL dev buy come to 0.03 + 0.2 + 0.04 ≈ <strong>0.27 SOL</strong>.</p>
+      </section>
+
+      <section id="docs-status" data-ds>
+        <h2>Terms</h2>
+        <div class="callout"><p><strong>Unaudited software.</strong> The Stacks program has not had a security audit yet. Use small amounts, and check the network badge on the launch form before you sign.</p></div>
+        <table class="tbl"><thead><tr><th>Term</th><th>Rule</th></tr></thead><tbody>
+          <tr><td>Where Stack payments go</td><td>To the token’s creator, minus a 2% protocol fee</td></tr>
+          <tr><td>Pre-bought Stacks</td><td>Creator pays the 2% fee on the floor price</td></tr>
+          <tr><td>Price after a Stack is taken</td><td>Restarts at the start price</td></tr>
+          <tr><td>Cut of the fee stream</td><td>None. Stacks keep 100% of the creator fees</td></tr>
+          <tr><td>Transferring a Stack</td><td>Supported by the program; earnings move with it</td></tr>
+          <tr><td>Stacks that never sell</td><td>Price stays at the floor; fees wait in the vault</td></tr>
+        </tbody></table>
+        <p>One thing outside Stacks’ control: Pump and Meteora can change their own programs and fee rules, including Pump’s admin tools for fee sharing.</p>
+      </section>
+
+      <section id="docs-faq" data-ds class="faq">
+        <h2>FAQ</h2>
+        <details><summary>Can two people take the same Stack?</summary><p>No. Only the first transaction to land wins. The other fails in full and the SOL is not spent.</p></details>
+        <details><summary>What if the price drops after I click?</summary><p>You pay the price at the moment the transaction lands, never more than the limit you signed. If it is lower, you pay the lower price.</p></details>
+        <details><summary>What is the difference between Degen and Builder?</summary><p>Degen starts at 1.5 SOL and drops to a 0.5 SOL floor in two minutes. Builder starts at 4 SOL and drops to a 1 SOL floor in three minutes and forty-five seconds.</p></details>
+        <details><summary>Is a Stack guaranteed to earn money?</summary><p>No. Earnings depend on how much the token trades. A Stack can earn less than you paid for it.</p></details>
+        <details><summary>Do I have to press Collect fees?</summary><p>Fees build up on Pump or Meteora until someone collects them. Anyone can press Collect fees, and it pays all ten Stacks at once. Then each holder claims their own share.</p></details>
+      </section>
+    </article>
+  </div>
+  <footer>
+    <a class="brand" href="#top" style="font-size:1.3rem"><span>Stack</span></a>
+    <span>Ten Stacks. One fee stream.</span>
+    <span class="mono">Built for Solana · Pump · Meteora</span>
+  </footer>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script type="module" src="/src/main.ts"></script>
+<script>
+(() => {
+'use strict';
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const pad = n => String(n).padStart(2, '0');
+const fmt = n => n.toFixed(3);
+const STEP = 15000;
+const MODES = {
+  degen:   { key: 'degen',   label: 'Degen',   start: 1.5, floor: 0.5, drop: 0.125 },
+  builder: { key: 'builder', label: 'Builder', start: 4,   floor: 1,   drop: 0.2 }
+};
+const priceAt = (m, ms) => Math.max(m.floor, +(m.start - m.drop * Math.floor(ms / STEP)).toFixed(4));
+const floorMs = m => Math.round((m.start - m.floor) / m.drop) * STEP;
+
+/* toast */
+let toastT;
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+/* nav border on scroll */
+const nav = $('#nav');
+addEventListener('scroll', () => nav.classList.toggle('scrolled', scrollY > 8), { passive: true });
+
+/* headline split */
+(function () {
+  const h = $('#h1'); const words = h.dataset.text.split(' ');
+  h.setAttribute('aria-label', h.dataset.text);
+  h.innerHTML = words.map((w, i) => {
+    const hot = w.startsWith('shared');
+    return `<span class="w" aria-hidden="true"><span style="--i:${i}"${hot ? ' class="hot"' : ''}>${w}</span></span>`;
+  }).join(' ');
+})();
+
+/* wallet */
+const wallet = { address: null };
+function walletProvider() { return (window.phantom && window.phantom.solana) || window.solana || window.solflare || null; }
+function paintWallet() {
+  const b = $('#walletBtn');
+  b.textContent = wallet.address ? wallet.address.slice(0, 4) + '…' + wallet.address.slice(-4) : 'Connect wallet';
+}
+const isLive = () => !!(window.StacksChain && window.StacksChain.live);
+function friendly(err) {
+  const m = String((err && (err.message || err)) || err);
+  if (/User rejected|rejected the request|cancel/i.test(m)) return 'Cancelled in your wallet.';
+  if (/PriceAboveMax|0x1780|6016/.test(m)) return 'The price moved before your transaction landed. Try again.';
+  if (/StackTaken|6015|0x177f/i.test(m)) return 'Someone took that Stack first. Pick another one.';
+  if (/insufficient lamports|insufficient funds|0x1\b/i.test(m)) return 'Not enough SOL in your wallet for this.';
+  if (/NothingToClaim|6018|0x1782/i.test(m)) return 'Nothing to claim yet. Collect fees first.';
+  return m.length > 160 ? m.slice(0, 160) + '…' : m;
+}
+async function connectWallet() {
+  if (isLive()) {
+    try { wallet.address = await window.StacksChain.connect(); paintWallet(); toast('Wallet connected'); return true; }
+    catch (e) { toast(friendly(e)); return false; }
+  }
+  const p = walletProvider();
+  if (!p) { toast('No Solana wallet found here. Open this page in a browser with Phantom or Solflare.'); return false; }
+  try {
+    const r = await p.connect();
+    wallet.address = (r && r.publicKey ? r.publicKey : p.publicKey).toString();
+    paintWallet(); toast('Wallet connected'); return true;
+  } catch (e) { toast('Wallet connection was cancelled.'); return false; }
+}
+$('#walletBtn').addEventListener('click', connectWallet);
+
+/* ================= HERO STATE ================= */
+const hero = {
+  mode: 'degen', t0: performance.now(), sel: 3,
+  owners: Array(10).fill(null),
+  paid: Array(10).fill(0), earned: 0
+};
+let scene = null;
+
+const heroSeg = $('#heroSeg');
+for (let i = 0; i < 10; i++) {
+  const b = document.createElement('button'); b.type = 'button'; b.textContent = pad(i + 1); b.dataset.i = i;
+  b.addEventListener('click', () => selectLot(i, true));
+  heroSeg.appendChild(b);
+}
+function selectLot(i, focus) {
+  hero.sel = i;
+  if (scene) scene.select(i, focus);
+  renderInspector(performance.now());
+}
+function renderInspector(now) {
+  const m = MODES[hero.mode]; const i = hero.sel; const el = now - hero.t0;
+  $$('button', heroSeg).forEach((b, k) => {
+    b.className = k === i ? 'sel' : '';
+    b.setAttribute('aria-label', `Stack ${pad(k + 1)}`);
+  });
+  $('#insLot').textContent = pad(i + 1);
+  const atFloor = el >= floorMs(m);
+  $('#insPrice').textContent = fmt(priceAt(m, el));
+  $('#insBar').style.width = (atFloor ? 100 : (el % STEP) / STEP * 100) + '%';
+  $('#insNote').textContent = atFloor
+    ? `${m.label} auctions bottom out at ${m.floor} SOL and stay there until someone takes a Stack.`
+    : `${m.label} auctions start at ${m.start} SOL and drop ${m.drop} SOL every 15 seconds. Next drop in ${Math.ceil((STEP - el % STEP) / 1000)}s.`;
+  $$('[data-hm]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.hm === hero.mode)));
+}
+$$('[data-hm]').forEach(b => b.addEventListener('click', () => { hero.mode = b.dataset.hm; hero.t0 = performance.now(); renderInspector(performance.now()); }));
+
+/* ================= 3D SCENE ================= */
+function initScene() {
+  const wrap = $('#glWrap'); const canvas = $('#gl');
+  if (!window.THREE) { wrap.classList.add('nogl'); return null; }
+  let renderer;
+  try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true }); }
+  catch (e) { wrap.classList.add('nogl'); return null; }
+  renderer.setClearColor(0x000000, 0);
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+  const sceneG = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
+  let dist = 15;
+
+  const C = { open: new THREE.Color(0x26262E), creator: new THREE.Color(0xF2F2F5), you: new THREE.Color(0x8B5CF6) };
+  const ACC = 0x8B5CF6;
+
+  sceneG.add(new THREE.HemisphereLight(0xffffff, 0x14141a, 0.75));
+  const key = new THREE.DirectionalLight(0xffffff, 0.95);
+  key.position.set(-6, 11, 7); key.castShadow = true;
+  key.shadow.mapSize.set(2048, 2048);
+  const sc = key.shadow.camera; sc.left = -7; sc.right = 7; sc.top = 7; sc.bottom = -7; sc.near = 1; sc.far = 32;
+  key.shadow.bias = -0.0004; key.shadow.radius = 5;
+  sceneG.add(key);
+  const rim = new THREE.DirectionalLight(ACC, 1.1); rim.position.set(7, 3, -6); sceneG.add(rim);
+  const glow = new THREE.PointLight(ACC, 0.9, 12); glow.position.set(0, 3.2, 1.5); sceneG.add(glow);
+
+  // the stack: ten plates, Stack 01 on top
+  const N = 10, PW = 4.0, PD = 2.5, PT = 0.26, PITCH = 0.42, Y0 = -2.05;
+  const floor = new THREE.Mesh(new THREE.CylinderGeometry(3.6, 3.6, 0.12, 96), new THREE.MeshStandardMaterial({ color: 0x0E0E12, roughness: 0.9 }));
+  floor.position.y = Y0 - 0.3; floor.receiveShadow = true; sceneG.add(floor);
+
+  const shape = new THREE.Shape(), rr = 0.38, hx = PW / 2, hz = PD / 2;
+  shape.moveTo(-hx + rr, -hz); shape.lineTo(hx - rr, -hz); shape.quadraticCurveTo(hx, -hz, hx, -hz + rr);
+  shape.lineTo(hx, hz - rr); shape.quadraticCurveTo(hx, hz, hx - rr, hz); shape.lineTo(-hx + rr, hz);
+  shape.quadraticCurveTo(-hx, hz, -hx, hz - rr); shape.lineTo(-hx, -hz + rr); shape.quadraticCurveTo(-hx, -hz, -hx + rr, -hz);
+  const geo = new THREE.ExtrudeGeometry(shape, { depth: PT, bevelEnabled: true, bevelThickness: 0.04, bevelSize: 0.04, bevelSegments: 3, curveSegments: 10 });
+  geo.rotateX(-Math.PI / 2);
+
+  // the coin: floats above the stack and feeds it
+  const coinTop = Y0 + (N - 1) * PITCH + 1.45;
+  const hub = new THREE.Group(); hub.position.y = coinTop; sceneG.add(hub);
+  const coin = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.62, 0.14, 64), new THREE.MeshStandardMaterial({ color: ACC, roughness: 0.28, metalness: 0.55, emissive: new THREE.Color(ACC), emissiveIntensity: 0.35 }));
+  coin.rotation.x = Math.PI / 2; coin.castShadow = true; hub.add(coin);
+  const hubCap = coin;
+  const HUB_TOP = coinTop;
+
+  const ring = new THREE.Group(); sceneG.add(ring);
+  const slabs = [];
+  const LABEL_X = PW / 2 + 1.45;
+  function paint(s) {
+    const c = s.cv, x = c.getContext('2d'), W = c.width, Hh = c.height;
+    x.clearRect(0, 0, W, Hh);
+    const o = s.owner, r = Hh / 2 - 6;
+    x.beginPath(); x.roundRect ? x.roundRect(4, 4, W - 8, Hh - 8, r) : x.rect(4, 4, W - 8, Hh - 8);
+    x.fillStyle = o === 'creator' ? '#F4F4F6' : o === 'you' ? '#8B5CF6' : 'rgba(20,20,26,.94)'; x.fill();
+    x.lineWidth = 3; x.strokeStyle = o ? 'rgba(255,255,255,0)' : '#34343F'; x.stroke();
+    x.textBaseline = 'middle';
+    x.fillStyle = o === 'creator' ? '#0A0A0C' : '#FFFFFF'; x.font = '800 64px "Bricolage Grotesque", sans-serif';
+    x.textAlign = 'left'; x.fillText(pad(s.i + 1), 34, Hh / 2 + 3);
+    x.fillStyle = o === 'creator' ? 'rgba(10,10,12,.6)' : o === 'you' ? 'rgba(255,255,255,.85)' : '#A78BFA'; x.font = '500 30px "DM Mono", monospace';
+    x.textAlign = 'right'; x.fillText(o === 'you' ? 'YOURS' : o === 'creator' ? 'CREATOR' : 'OPEN · 10%', W - 34, Hh / 2 + 2);
+    s.tex.needsUpdate = true;
+  }
+  for (let i = 0; i < N; i++) {
+    const level = N - 1 - i;
+    const inner = new THREE.Group(); ring.add(inner);
+    const mat = new THREE.MeshStandardMaterial({ color: 0x26262E, roughness: 0.36, metalness: 0.12, emissive: new THREE.Color(ACC), emissiveIntensity: 0 });
+    const mesh = new THREE.Mesh(geo, mat); mesh.castShadow = true; mesh.receiveShadow = true; mesh.userData.i = i; inner.add(mesh);
+    const cv = document.createElement('canvas'); cv.width = 512; cv.height = 128;
+    const tex = new THREE.CanvasTexture(cv); tex.anisotropy = 8;
+    const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
+    spr.scale.set(1.9, 0.475, 1); spr.renderOrder = 10; spr.userData.i = i; sceneG.add(spr);
+    slabs.push({ i, level, inner, mesh, mat, cv, tex, spr, owner: hero.owners[i], lift: 0, out: 0, pulse: 0 });
+  }
+  const paintAll = () => slabs.forEach(paint);
+  paintAll();
+  if (document.fonts && document.fonts.load) {
+    Promise.all([document.fonts.load('800 100px "Bricolage Grotesque"'), document.fonts.load('500 20px "DM Mono"')]).then(paintAll).catch(() => {});
+  }
+
+  // particles: fees flowing from the coin into the Stacks
+  const pGeo = new THREE.SphereGeometry(0.07, 12, 12); const pMat = new THREE.MeshBasicMaterial({ color: 0xC4B5FD });
+  const parts = Array.from({ length: 18 }, () => {
+    const m = new THREE.Mesh(pGeo, pMat); m.visible = false; sceneG.add(m);
+    return { m, t: Math.random(), spd: 0.32 + Math.random() * 0.25, tgt: -1 };
+  });
+  const P0 = new THREE.Vector3(0, HUB_TOP, 0), P1 = new THREE.Vector3(), P2 = new THREE.Vector3();
+  function pickTarget() {
+    return Math.floor(Math.random() * slabs.length);
+  }
+
+  // interaction
+  const ray = new THREE.Raycaster(); const ndc = new THREE.Vector2();
+  let rot = -0.55, vel = 0, dragging = false, moved = 0, lastX = 0, idle = 0, focusT = null;
+  let hoverI = -1, selI = hero.sel, px = 0;
+  function setNdc(e) { const r = canvas.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); px = ndc.x; }
+  function pick() {
+    ray.setFromCamera(ndc, camera);
+    const hit = ray.intersectObjects(slabs.map(s => s.spr).concat(slabs.map(s => s.mesh)), false)[0];
+    hoverI = hit ? hit.object.userData.i : -1;
+    canvas.style.cursor = dragging ? 'grabbing' : hoverI >= 0 ? 'pointer' : 'grab';
+  }
+  canvas.addEventListener('pointerdown', e => { dragging = true; moved = 0; lastX = e.clientX; vel = 0; focusT = null; try { canvas.setPointerCapture(e.pointerId); } catch (_) {} canvas.style.cursor = 'grabbing'; });
+  canvas.addEventListener('pointermove', e => {
+    setNdc(e);
+    if (dragging) { const dx = e.clientX - lastX; lastX = e.clientX; moved += Math.abs(dx); rot += dx * 0.0075; vel = dx * 0.45; idle = 0; }
+    else pick();
+  });
+  canvas.addEventListener('pointerup', e => {
+    setNdc(e); dragging = false; pick();
+    if (moved < 6 && hoverI >= 0) selectLot(hoverI, true);
+  });
+  canvas.addEventListener('pointercancel', () => { dragging = false; });
+  canvas.addEventListener('pointerleave', () => { if (!dragging) { hoverI = -1; canvas.style.cursor = 'grab'; } });
+  canvas.style.cursor = 'grab';
+
+  function resize() {
+    const r = wrap.getBoundingClientRect(); if (!r.width || !r.height) return;
+    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+    renderer.setSize(r.width, r.height, false);
+    camera.aspect = r.width / r.height;
+    dist = 15 / Math.min(1, camera.aspect / 1.2);
+    camera.updateProjectionMatrix();
+  }
+  new ResizeObserver(resize).observe(wrap); resize();
+
+  let last = performance.now(), time = 0;
+  function step(now) {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now; time += dt;
+    // rotation
+    if (!dragging) {
+      rot += vel * dt; vel *= Math.pow(0.02, dt); idle += dt;
+      if (!reduce && idle > 2.5 && focusT === null) rot += dt * 0.14;
+    }
+    if (focusT !== null) {
+      const TAU = Math.PI * 2; let d = (((focusT - rot + Math.PI) % TAU) + TAU) % TAU - Math.PI;
+      rot += d * Math.min(1, dt * 4); idle = 0; if (Math.abs(d) < 0.003) focusT = null;
+    }
+    ring.rotation.y = rot;
+    // camera
+    const el = 0.36 + (reduce ? 0 : -px * 0.02);
+    camera.position.set(px * 0.5, Math.sin(el) * dist, Math.cos(el) * dist);
+    camera.lookAt(0.75, 0.05, 0);
+    hub.position.y = coinTop + (reduce ? 0 : Math.sin(time * 1.6) * 0.08);
+    coin.rotation.z = reduce ? 0.5 : time * 1.4;
+    // stacks: hover and selection slide a plate out toward the viewer
+    const k = Math.min(1, dt * 9), fx = -Math.sin(rot), fz = Math.cos(rot);
+    for (const s of slabs) {
+      const hov = hoverI === s.i ? 1 : 0, sel = selI === s.i ? 1 : 0;
+      s.out += ((hov * 0.3 + sel * 0.95) - s.out) * k;
+      s.lift += ((hov * 0.02 + sel * 0.04) - s.lift) * k;
+      const y = Y0 + s.level * PITCH + s.lift + (reduce ? 0 : Math.sin(time * 1.1 + s.i * 0.7) * 0.012);
+      s.inner.position.set(fx * s.out, y, fz * s.out);
+      s.spr.position.set(LABEL_X + s.out * 0.9, y + PT / 2, 0.4 + s.out * 0.6);
+      s.mat.color.lerp(C[s.owner || 'open'], Math.min(1, dt * 7));
+      s.pulse = Math.max(0, s.pulse - dt * 2.2); s.mat.emissiveIntensity = s.pulse * 0.6 + (sel ? 0.08 : 0);
+    }
+    // particles
+    for (const p of parts) {
+      if (p.tgt < 0 || p.t >= 1) {
+        if (p.tgt >= 0 && p.t >= 1) arrive(p.tgt);
+        p.tgt = pickTarget(); p.t = 0; p.spd = 0.32 + Math.random() * 0.25;
+      }
+      if (p.tgt < 0) { p.m.visible = false; continue; }
+      p.m.visible = true; p.t += (reduce ? 0.04 : p.spd) * dt;
+      const s = slabs[p.tgt];
+      P0.set(0, hub.position.y, 0);
+      P2.set(LABEL_X - 0.98 + s.out * 0.9, s.inner.position.y + PT / 2, 0.4 + s.out * 0.6);
+      P1.set(P2.x + 0.9, (P0.y + P2.y) / 2 + 0.6, 1.2);
+      const t = Math.min(p.t, 1), u = 1 - t;
+      p.m.position.set(u * u * P0.x + 2 * u * t * P1.x + t * t * P2.x, u * u * P0.y + 2 * u * t * P1.y + t * t * P2.y, u * u * P0.z + 2 * u * t * P1.z + t * t * P2.z);
+      p.m.scale.setScalar(0.5 + Math.sin(Math.PI * t) * 0.8);
+    }
+    renderer.render(sceneG, camera);
+  }
+  function arrive(i) {
+    const s = slabs[i]; if (!s) return; s.pulse = 1;
+  }
+
+  let running = false, raf = 0;
+  function loop(now) { if (!running) return; raf = requestAnimationFrame(loop); step(now); }
+  new IntersectionObserver(es => {
+    const v = es[0].isIntersecting;
+    if (v && !running) { running = true; last = performance.now(); raf = requestAnimationFrame(loop); }
+    else if (!v) { running = false; cancelAnimationFrame(raf); }
+  }).observe(canvas);
+  step(performance.now());
+
+  return {
+    setOwner(i, o) { slabs[i].owner = o; paint(slabs[i]); slabs[i].pulse = 1; },
+    select(i, focus) { selI = i; },
+    reset() { slabs.forEach(s => { s.owner = hero.owners[s.i]; paint(s); }); }
+  };
+}
+scene = initScene();
+selectLot(3, false);
+
+/* ================= AUCTION CHART ================= */
+(function () {
+  const svg = $('#chart'); const NS = 'http://www.w3.org/2000/svg';
+  const W = 640, H = 300, L = 46, Rr = 18, T = 16, B = 34, TMAX = 240, VMAX = 4.5;
+  const X = t => L + t / TMAX * (W - L - Rr), Y = v => T + (1 - v / VMAX) * (H - T - B);
+  let mode = 'degen', speed = 1, c0 = performance.now(), dot, vis = false;
+  const mk = (n, a, txt) => { const e = document.createElementNS(NS, n); for (const k in a) e.setAttribute(k, a[k]); if (txt != null) e.textContent = txt; return e; };
+  function stair(m) {
+    const n = Math.round((m.start - m.floor) / m.drop); let d = `M${X(0)} ${Y(m.start)}`;
+    for (let k = 1; k <= n; k++) d += ` H${X(k * 15)} V${Y(m.start - k * m.drop)}`;
+    return d + ` H${X(TMAX)}`;
+  }
+  function build() {
+    svg.innerHTML = '';
+    for (let v = 0; v <= 4; v++) {
+      svg.appendChild(mk('line', { class: 'grid', x1: L, x2: W - Rr, y1: Y(v), y2: Y(v) }));
+      svg.appendChild(mk('text', { x: L - 10, y: Y(v) + 4, 'text-anchor': 'end' }, String(v)));
+    }
+    [0, 60, 120, 180, 240].forEach(t => svg.appendChild(mk('text', { x: X(t), y: H - 10, 'text-anchor': t === 240 ? 'end' : t === 0 ? 'start' : 'middle' }, t + 's')));
+    svg.appendChild(mk('line', { class: 'axis', x1: L, x2: W - Rr, y1: Y(0), y2: Y(0) }));
+    ['builder', 'degen'].forEach(k => {
+      const m = MODES[k];
+      svg.appendChild(mk('path', { class: `st ${k}${k === mode ? '' : ' dim'}`, d: stair(m) }));
+      svg.appendChild(mk('text', { class: `tag ${k}`, x: X(TMAX) - 4, y: Y(m.floor) - 9, 'text-anchor': 'end', opacity: k === mode ? 1 : 0.4 }, m.label));
+    });
+    const m = MODES[mode], tf = floorMs(m) / 1000;
+    svg.appendChild(mk('line', { class: 'floor', x1: X(tf), x2: X(tf), y1: Y(m.floor), y2: Y(0) }));
+    svg.appendChild(mk('text', { x: X(tf) + (tf > 200 ? -6 : 6), y: Y(0) - 8, 'text-anchor': tf > 200 ? 'end' : 'start' }, `floor ${tf}s`));
+    dot = mk('circle', { r: 6.5, fill: mode === 'degen' ? '#8B5CF6' : '#F4F4F6', stroke: '#08080A', 'stroke-width': 2.5 });
+    svg.appendChild(dot);
+  }
+  function tick(now) {
+    const m = MODES[mode]; const t = ((now - c0) / 1000 * speed) % TMAX; const p = priceAt(m, t * 1000);
+    dot.setAttribute('cx', X(t)); dot.setAttribute('cy', Y(p));
+    const tf = floorMs(m) / 1000;
+    $('#chartRead').textContent = `t = ${String(Math.floor(t)).padStart(3, ' ')}s · ${fmt(p)} SOL · ` + (t >= tf ? 'at floor' : `next drop in ${Math.ceil(15 - t % 15)}s`);
+  }
+  $$('[data-cm]').forEach(b => b.addEventListener('click', () => { mode = b.dataset.cm; c0 = performance.now(); $$('[data-cm]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); build(); }));
+  $$('[data-sp]').forEach(b => b.addEventListener('click', () => { speed = +b.dataset.sp; c0 = performance.now(); $$('[data-sp]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); }));
+  build(); tick(performance.now());
+  new IntersectionObserver(es => { vis = es[0].isIntersecting; }).observe(svg);
+  window.__chartTick = now => { if (vis) tick(now); };
+})();
+
+/* ================= LAUNCHES ================= */
+const SAMPLE = [];
+let launches = SAMPLE.map((l, i) => ({ ...l, id: i, t0: performance.now() - ((i * 13700) % 100000) }));
+let tab = 'top';
+const TABS = [
+  ['top', 'Top launches', ls => [...ls].sort((a, b) => b.sold - a.sold)],
+  ['all', 'All launches', ls => ls],
+  ['live', 'Live auctions', ls => ls.filter(l => l.sold < 10)],
+  ['migrating', 'Migrating', () => []],
+  ['earning', 'Earning', ls => ls.filter(l => l.sold === 10)],
+  ['swept', 'Swept', () => []]
+];
+function renderTabs() {
+  $('#tabs').innerHTML = TABS.map(([k, label, f]) => `<button class="tab" role="tab" type="button" data-tab="${k}" aria-selected="${k === tab}">${label}<span>${pad(f(launches).length)}</span></button>`).join('');
+}
+function cardHTML(l) {
+  const full = l.sold === 10;
+  const stacks = Array.from({ length: 10 }, (_, k) => `<i class="${k < l.sold ? 'on' : ''}"></i>`).join('');
+  return `<article class="card" data-id="${l.id}">
+    <div class="c-head"><span class="av" style="background:${l.hue}">${l.image ? `<img src="${esc(l.image)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:inherit">` : esc((l.sym || '?')[0])}</span>
+      <div style="min-width:0"><h3>${esc(l.name)}</h3><span class="mono">$${esc(l.sym)} · ${l.venue}</span></div>
+      <span class="pill">${MODES[l.mode].label}</span></div>
+    <div class="stacks" aria-hidden="true">${stacks}</div>
+    <div class="c-meta"><span>${full ? 'All ten Stacks taken' : `${l.sold} of 10 Stacks taken`}</span><span>${full ? 'Earning' : `${10 - l.sold} left`}</span></div>
+    ${full ? '' : `<div class="c-px"><b data-px>—</b><small>SOL</small><span class="t" data-t></span></div><div class="bar"><i data-bar></i></div>`}
+    <button class="btn ${full ? 'ghost' : 'solid'}" type="button" data-take ${full ? 'disabled' : ''}>${full ? 'Fees are streaming' : 'Take a Stack'}</button>
+  </article>`;
+}
+function renderGrid(animate) {
+  const f = TABS.find(t => t[0] === tab)[2]; const list = f(launches);
+  const grid = $('#grid');
+  grid.innerHTML = list.length ? list.map(cardHTML).join('') : `<div class="empty">${launches.length ? 'No launches in this view yet.' : 'No launches yet. The first one will show up here.'}</div>`;
+  if (animate && !reduce) $$('.card, .empty', grid).forEach((c, i) => c.animate([{ opacity: 0, transform: 'translateY(18px)' }, { opacity: 1, transform: 'none' }], { duration: 520, delay: i * 55, easing: 'cubic-bezier(.2,.7,.2,1)', fill: 'backwards' }));
+  updateCards(performance.now());
+}
+function updateCards(now) {
+  $$('#grid .card').forEach(c => {
+    const l = launches[+c.dataset.id]; if (l.sold === 10) return;
+    const m = MODES[l.mode]; const el = now - l.t0; const px = c.querySelector('[data-px]');
+    if (!px) return;
+    const v = fmt(priceAt(m, el)); if (px.textContent !== v) px.textContent = v;
+    const atFloor = el >= floorMs(m);
+    const t = atFloor ? 'at floor' : `drop in ${Math.ceil((STEP - el % STEP) / 1000)}s`;
+    const te = c.querySelector('[data-t]'); if (te.textContent !== t) te.textContent = t;
+    c.querySelector('[data-bar]').style.width = (atFloor ? 100 : (el % STEP) / STEP * 100) + '%';
+  });
+}
+$('#tabs').addEventListener('click', e => {
+  const b = e.target.closest('[data-tab]'); if (!b) return;
+  tab = b.dataset.tab; renderTabs(); renderGrid(true);
+});
+$('#grid').addEventListener('click', e => {
+  const b = e.target.closest('[data-take]'); if (!b || b.disabled) return;
+  const card = b.closest('.card'); const l = launches[+card.dataset.id];
+  if (l.live) {
+    const price = window.StacksChain.priceNow(l.mint) ?? priceAt(MODES[l.mode], performance.now() - l.t0);
+    const old = b.textContent; b.disabled = true; b.textContent = 'Confirm in your wallet…';
+    window.StacksChain.take(l.mint, l.nextIndex, price)
+      .then(() => toast(`Stack ${pad(l.nextIndex + 1)} of $${l.sym} is yours at ${fmt(price)} SOL`))
+      .catch(err => toast(friendly(err)))
+      .finally(() => { b.disabled = false; b.textContent = old; });
+    return;
+  }
+  const p = priceAt(MODES[l.mode], performance.now() - l.t0);
+  l.sold += 1; l.t0 = performance.now();
+  toast(`Took Stack ${pad(l.sold)} of $${l.sym} at ${fmt(p)} SOL`);
+  if (l.sold === 10) { renderTabs(); renderGrid(false); return; }
+  const lotsEls = $$('.stacks i', card); lotsEls[l.sold - 1].className = 'on new';
+  $$('.c-meta span', card)[0].textContent = `${l.sold} of 10 Stacks taken`; $$('.c-meta span', card)[1].textContent = `${10 - l.sold} left`;
+  card.classList.remove('flash'); void card.offsetWidth; card.classList.add('flash'); renderTabs();
+});
+$('#grid').addEventListener('pointermove', e => {
+  if (reduce || e.pointerType === 'touch') return;
+  const c = e.target.closest('.card'); if (!c) return;
+  const r = c.getBoundingClientRect();
+  c.style.setProperty('--ry', ((e.clientX - r.left) / r.width - 0.5) * 7 + 'deg');
+  c.style.setProperty('--rx', (0.5 - (e.clientY - r.top) / r.height) * 7 + 'deg');
+});
+$('#grid').addEventListener('pointerout', e => { const c = e.target.closest('.card'); if (c) { c.style.setProperty('--rx', '0deg'); c.style.setProperty('--ry', '0deg'); } });
+renderTabs(); renderGrid(false);
+
+/* ================= LIVE (on-chain) HOOKS ================= */
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function netName() { return window.StacksChain && window.StacksChain.cluster === 'mainnet-beta' ? 'Solana' : 'Solana devnet'; }
+window.StacksUI = {
+  toast,
+  setLaunches(list) {
+    launches = list.map((l, i) => ({ ...l, id: i }));
+    $('#gridNote').textContent = `Live on ${netName()}. Prices drop every 15 seconds and restart after each take. Taking a Stack sends one transaction from your wallet.`;
+    renderTabs(); renderGrid(false);
+  },
+  renderMine(rows) {
+    const box = $('#mineList');
+    if (rows === null) { box.innerHTML = `<div class="empty">Connect your wallet to see the Stacks you hold.</div>`; return; }
+    if (!rows.length) { box.innerHTML = `<div class="empty">You don’t hold any Stacks yet. Take one above.</div>`; return; }
+    box.innerHTML = rows.map(r => `<div class="mine-row" data-mint="${esc(r.mint)}" data-index="${r.index}">
+      <div style="min-width:0"><b>$${esc(r.sym)} · Stack ${pad(r.index + 1)}</b><span class="mono">${esc(r.name)} · ${esc(r.venue)}</span></div>
+      <div class="mine-amt"><b>${r.claimable.toFixed(4)}</b><small> SOL ready</small></div>
+      <div class="mine-act"><button class="btn ghost" type="button" data-collect>Collect fees</button><button class="btn solid" type="button" data-claim ${r.claimable > 0 ? '' : 'disabled'}>Claim</button></div>
+    </div>`).join('');
+  }
+};
+$('#mineList').addEventListener('click', e => {
+  const b = e.target.closest('[data-claim],[data-collect]'); if (!b || b.disabled) return;
+  const row = b.closest('.mine-row'); const mint = row.dataset.mint, index = +row.dataset.index;
+  const old = b.textContent; b.disabled = true; b.textContent = 'Confirm in wallet…';
+  const job = b.hasAttribute('data-claim') ? window.StacksChain.claim(mint, index) : window.StacksChain.collectFees(mint);
+  job.then(() => toast(b.hasAttribute('data-claim') ? 'Claimed to your wallet' : 'Fees paid into all ten Stacks'))
+    .catch(err => toast(friendly(err)))
+    .finally(() => { b.disabled = false; b.textContent = old; });
+});
+$('#mineConnect').addEventListener('click', connectWallet);
+function onChainReady() {
+  if (!isLive()) return;
+  document.documentElement.classList.add('is-live');
+  $('#netFlag').textContent = netName();
+  $('#mine').hidden = false;
+  window.StacksUI.renderMine(null);
+}
+if (window.StacksChain) onChainReady(); else window.addEventListener('stacks:ready', onChainReady);
+
+/* ================= LAUNCH FORM ================= */
+(function () {
+  const f = { venue: 'pump', mode: 'degen', pre: 3, img: null };
+  const venueName = () => f.venue === 'pump' ? 'Pump' : 'Meteora';
+  const nameI = $('#tName'), symI = $('#tSym'), dev = $('#dev');
+  const seg = $('#preSeg');
+  for (let i = 1; i <= 10; i++) { const s = document.createElement('span'); s.textContent = pad(i); seg.appendChild(s); }
+
+  function devVal() { const v = parseFloat(String(dev.value).replace(',', '.')); return isFinite(v) && v > 0 ? v : 0; }
+  function missing() {
+    const m = []; if (!nameI.value.trim()) m.push('a token name'); if (!symI.value.trim()) m.push('a symbol'); if (!f.img) m.push('a token image'); return m;
+  }
+  function render() {
+    const m = MODES[f.mode];
+    $$('.venue').forEach(b => b.setAttribute('aria-checked', String(b.dataset.venue === f.venue)));
+    $$('.mode').forEach(b => b.setAttribute('aria-checked', String(b.dataset.mode === f.mode)));
+    $('#preN').textContent = f.pre;
+    $$('span', seg).forEach((s, k) => { const n = k + 1; s.className = n <= f.pre ? 'pre' : n <= 5 ? 'avail' : ''; });
+    $('#nameCt').textContent = nameI.value.length + '/32'; $('#symCt').textContent = symI.value.length + '/10';
+    const d = devVal(); const tokens = d * 1073e6 / (30 + d);
+    $('#devEst').textContent = '~' + (tokens ? new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(tokens) : '0') + ' tokens';
+    // Pre-bought Stacks cost only the 2% protocol fee: the floor price would be paid to yourself.
+    const preFee = +(f.pre * m.floor * 0.02).toFixed(4); const network = 0.04;
+    const total = +(preFee + d + network).toFixed(3);
+    $('#sVenue').textContent = venueName(); $('#sMode').textContent = m.label;
+    $('#sAuc').textContent = `${10 - f.pre} of 10`; $('#sPre').textContent = f.pre ? `${f.pre} · ${preFee} SOL fee` : 'None';
+    $('#sDev').textContent = `${d} SOL`; $('#sTotal').textContent = `${total} SOL`;
+    const miss = missing();
+    $('#help').textContent = miss.length ? `Add ${miss.join(', ').replace(/, ([^,]*)$/, ' and $1')} to continue.` : 'Ready. Review the total, then launch.';
+  }
+  $$('.venue').forEach(b => b.addEventListener('click', () => { f.venue = b.dataset.venue; render(); }));
+  $$('.mode').forEach(b => b.addEventListener('click', () => { f.mode = b.dataset.mode; render(); }));
+  $('#preMinus').addEventListener('click', () => { f.pre = Math.max(0, f.pre - 1); render(); });
+  $('#prePlus').addEventListener('click', () => { f.pre = Math.min(5, f.pre + 1); render(); });
+  [nameI, symI, dev].forEach(i => i.addEventListener('input', () => {
+    if (i === symI) i.value = i.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+    if (i === dev) i.value = i.value.replace(/[^0-9.,]/g, '');
+    render();
+  }));
+
+  // image
+  const drop = $('#drop'), file = $('#tImg');
+  function setFile(fl) {
+    const hint = $('#imgHint');
+    if (!fl) return;
+    if (!/^image\/(png|jpeg|gif|webp)$/.test(fl.type)) { hint.textContent = 'That file type is not supported. Use PNG, JPEG, GIF or WebP.'; hint.className = 'hintline err'; return; }
+    if (fl.size > 5 * 1024 * 1024) { hint.textContent = 'That image is over 5 MB. Choose a smaller one.'; hint.className = 'hintline err'; return; }
+    f.img = fl; hint.className = 'hintline'; hint.textContent = 'Uploaded when you launch.';
+    const im = $('#dropImg'); try { if (im.dataset.u) URL.revokeObjectURL(im.dataset.u); const u = URL.createObjectURL(fl); im.dataset.u = u; im.src = u; } catch (e) {}
+    im.hidden = false; $('#dropIdle').hidden = true; const fn = $('#dropFn'); fn.hidden = false; fn.textContent = fl.name; render();
+  }
+  file.addEventListener('change', () => setFile(file.files[0]));
+  ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', e => setFile(e.dataTransfer.files[0]));
+
+  // launch
+  let busy = false;
+  const btn = $('#launchBtn');
+  btn.addEventListener('click', async () => {
+    if (busy) return;
+    const miss = missing();
+    if (miss.length) { btn.classList.remove('shake'); void btn.offsetWidth; btn.classList.add('shake'); toast('Add ' + miss.join(', ').replace(/, ([^,]*)$/, ' and $1') + ' first.'); return; }
+    if (isLive()) return liveLaunch();
+    $('#help').textContent = 'Launching opens as soon as Stack goes live on Solana. Your details are saved on this page until then.';
+    toast('Launching opens soon');
+  });
+
+  async function liveLaunch() {
+    if (!wallet.address) { const ok = await connectWallet(); if (!ok) return; }
+    busy = true; btn.disabled = true; $('#doneBox').hidden = true;
+    const sym = symI.value;
+    const labels = f.venue === 'pump'
+      ? ['Uploading the image and metadata', `Creating $${sym} on Pump`, 'Registering the Stacks and turning on fee sharing', 'Locking fees to the ten Stacks and opening the auction']
+      : ['Uploading the image and metadata', `Creating $${sym} on Meteora`, 'Handing creator fees to the Stacks and opening the auction'];
+    const ol = $('#progress'); ol.hidden = false; ol.innerHTML = labels.map(l => `<li><i></i>${l}</li>`).join('');
+    const items = $$('li', ol);
+    const step = i => items.forEach((li, k) => { li.className = k < i ? 'done' : k === i ? 'run' : ''; });
+    $('#help').textContent = 'Your wallet will ask you to approve all transactions at once.';
+    try {
+      const r = await window.StacksChain.launch({
+        venue: f.venue, name: nameI.value.trim(), symbol: sym, image: f.img,
+        twitter: $('#sX').value.trim(), telegram: $('#sT').value.trim(), website: $('#sW').value.trim(),
+        mode: f.mode, prebuy: f.pre, devBuySol: devVal()
+      }, i => step(i));
+      step(items.length);
+      const box = $('#doneBox'); box.hidden = false;
+      box.innerHTML = `<b>$${esc(sym)} is live.</b> ${10 - f.pre} Stacks are up for auction on ${venueName()}. <a href="${r.explorer}" target="_blank" rel="noopener">View the transaction</a>. Mint: <span class="mono" style="text-transform:none;word-break:break-all">${esc(r.mint)}</span>`;
+      toast('Launched');
+    } catch (err) {
+      items.forEach(li => { if (li.className === 'run') li.className = ''; });
+      $('#help').innerHTML = `<span class="err">${esc(friendly(err))}</span>`;
+      toast(friendly(err));
+    } finally { busy = false; btn.disabled = false; }
+  }
+  render();
+})();
+
+/* ================= DOCS ROUTING ================= */
+(function () {
+  const main = $('#top'), docs = $('#docsView'); const links = $$('.dside a');
+  let wasDocs = false;
+  function show() {
+    const h = decodeURIComponent(location.hash.slice(1));
+    const isDocs = h === 'docs' || h.startsWith('docs-');
+    main.hidden = isDocs; docs.hidden = !isDocs;
+    requestAnimationFrame(() => {
+      const el = h && h !== 'docs' ? document.getElementById(h) : null;
+      if (el) el.scrollIntoView(); else if (isDocs || wasDocs || !h) scrollTo(0, 0);
+      wasDocs = isDocs;
+    });
+    links.forEach((a, i) => a.classList.toggle('on', a.getAttribute('href') === '#' + h || (h === 'docs' && i === 0)));
+  }
+  addEventListener('hashchange', show);
+  const io = new IntersectionObserver(es => {
+    es.forEach(e => { if (e.isIntersecting) links.forEach(a => a.classList.toggle('on', a.getAttribute('href') === '#' + e.target.id)); });
+  }, { rootMargin: '-15% 0px -70% 0px' });
+  $$('[data-ds]').forEach(s => io.observe(s));
+  show();
+})();
+
+/* ================= TICKER ================= */
+let lastUI = 0;
+function tick(now) {
+  requestAnimationFrame(tick);
+  if (window.__chartTick) window.__chartTick(now);
+  if (now - lastUI > 120) { lastUI = now; renderInspector(now); updateCards(now); }
+}
+requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>
